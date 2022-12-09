@@ -1,0 +1,25 @@
+apiVersion: "k8s.cni.cncf.io/v1"
+kind: NetworkAttachmentDefinition
+metadata:
+  name: nad-if2
+spec:
+  config: '{
+      "cniVersion": "0.3.0",
+      "type": "ipvlan",
+      "master": "eth2",
+      "mode": "l2",
+      "ipam": {
+        "type": "host-local",
+        "ranges": [
+            [ {
+                  "subnet": "10.0.254.16/30",
+                  "rangeStart": "10.0.254.17",
+                  "rangeEnd": "10.0.254.17",
+                  "routes": [
+                    { "dst": "10.10.10.48/32" }
+                  ],
+                  "gateway": "1.1.1.1"
+            } ]
+        ]
+      }
+  }'

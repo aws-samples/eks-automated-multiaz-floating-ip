@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: busybox-deployment
+  labels:
+    app: busybox
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: busybox
+  template:
+    metadata:
+      labels:
+        app: busybox
+      annotations:
+        k8s.v1.cni.cncf.io/networks: nad-if1,nad-if2
+    spec:
+      nodeSelector:
+        cnf: cnf1
+      containers:
+      - name: vipmanager
+        image: 903666168365.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
+        imagePullPolicy: Always
+        securityContext:
+          capabilities:
+            add: ["NET_ADMIN"]     
+        args: [/bin/sh, -c, '/app/script.sh']
+        envFrom:
+              - configMapRef:
+                  name: vipmanager-config        
+      - name: busybox
+        image: busybox
+        imagePullPolicy: IfNotPresent
+        command: ['sh', '-c', 'echo Container 1 is Running ; sleep 3600']
+
