@@ -22,7 +22,7 @@ spec:
         cnf: cnf1
       containers:
       - name: vipmanager
-        image: 903666168365.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
+        image: xxxxxxxxxxxx.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
         imagePullPolicy: Always
         securityContext:
           capabilities:
