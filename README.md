@@ -37,11 +37,8 @@ Create the ECR repo and push the image to ECR
 
 ```
 aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin xxxxxxxxxxxx.dkr.ecr.us-east-2.amazonaws.com
-
 aws ecr create-repository --repository-name vipmanager --region us-east-2
-
 docker push xxxxxxxxxxxx.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
-
 ```
 ### Container Configuration using Config map 
 
@@ -54,10 +51,14 @@ EX:
   RunAsSidecar: "False"
   SubnetBasedLoopbacks: "False"
 
-Intf1Peers --> This represents the peer network/hosts/clients communication with the 1st interface(net1/eth1) of the Multus pod  
+Intf1Peers --> This represents the peer network/hosts/clients communication with the 1st interface(net1/eth1) of the Multus pod 
+
 Intf2Peers --> This represents the peer network/hosts/clients communication with the 2nd interface(net2/eth2) of the Multus pod. (Optional if you don’t have 2nd interface peers)
+
 VPCRTTag --> This config represents the TAGs on the vpc routing table, to select and update the routes. If absent or "ALL" value is provided then all the routing tables in that VPC are updated with the routes.
-RunAsSidecar --> This config indicates whether this container has to run as initContainer (False) or as a sidecar (TRUE).
+
+RunAsSidecar --> This config indicates whether this container has to run as initContainer (False) or as a sidecar (True).
+
 SubnetBasedLoopbacks --> This config is to indicate, if pattern 1 (non-vpc IP addresses are used for multus) or pattern 2 (VPC IP addresses used for multus). For pattern 1 set as False, and for pattern 2 set True.
 
 ```
