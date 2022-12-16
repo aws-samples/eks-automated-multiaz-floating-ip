@@ -17,9 +17,13 @@ if [ -n "${RunAsSidecar}" ]; then
     args+=" --runAsSidecar "
     args+="${RunAsSidecar}"
 fi
-if [ -n "${SubnetLoopbacks}" ]; then
+if [ -n "${UseSBR}" ]; then
+    args+=" --useSBR "
+    args+="${UseSBR}"
+fi
+if [ -n "${SubnetBasedLoopbacks}" ]; then
     args+=" --subnetLoopbacks "
-    args+="${SubnetLoopbacks}"
+    args+="${SubnetBasedLoopbacks}"
 fi
 echo option ${tag} ${args}
 python3 -u assign-vip.py --vpcRTTag ${tag}  ${args}

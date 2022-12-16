@@ -105,9 +105,20 @@ def shell_run_cmd(cmd,printOutput=True):
     if printOutput:
         tprint("stdout:" + str(stdout.split("\n")) + " stderr: " + stderr + " retCode: " + str(retCode))
     return (stdout, retCode)      
-def addRoute(peers,gw,intf):
+def addSBR(cidr, table):
+    ip_str=cidr.split('/')
+    query_cmd="ip rule ls | grep -q " + ip_str[0]
+    tprint("check if there is a matching rule first: " + query_cmd)
+    output, ret=shell_run_cmd(query_cmd)
+    if ret==1:
+        cmd="ip rule add from " + cidr + " table " + str(table)
+        shell_run_cmd(cmd)
+def addRoute(peers,gw,intf,table,useSBR):
     for peer in peers:
-        cmd="ip r add " + peer + " via "+ gw + " dev " + intf+ " onlink"
+        if useSBR: 
+            cmd="ip r add default via "+ gw + " dev " + intf+ " onlink table " + str(table)
+        else:
+            cmd="ip r add " + peer + " via "+ gw + " dev " + intf+ " onlink"
         shell_run_cmd(cmd)
 # This function checks if the prefix with prefixlen(netmask) belongs to a subnet or not, and returns the subnet cidr the ip address belongs to
 def find_subnet_cidr(inputCidr,subnetDetails):
@@ -162,6 +173,7 @@ def add_route_new(eni,cidr,rtb,ec2client) :
                 DestinationCidrBlock=cidr,
                 NetworkInterfaceId=eni
             )        
+            tprint(f"Finished adding new route for { cidr} {eni}")
         except botocore.exceptions.ClientError as err:
             errorcode = err.response['Error']['Code']            
             tprint(f"error { errorcode } for { cidr} {eni} in {rtb} while  adding, route might still be there, skipping add" )
@@ -214,6 +226,7 @@ def main():
     vpcId=[]
     rtbResources={}
     subnetLoopbacks=False 
+    useSBR=True
     subnetDetails={}
     peers={}
     routeAddCompleted=False
@@ -225,9 +238,12 @@ def main():
     parser.add_argument('--intf2Peers', metavar='eth2Peers', default=None,required=False, help='Options: 2.1.1.1,2.1.1.2 This represents This optional param is to add static route comma separated peers for second Multus interface i.e. eth2')
     parser.add_argument('--subnetLoopbacks', metavar='SubnetBasedLoopbacks', default="False",required=False, help='true|false This indicates if Loopbacks are defined as subnets in VPC. Default value is false')    
     parser.add_argument('--runAsSidecar', metavar='runAsSidecar', default="False",required=False, help='true|false This indicates if this container shall run as sidecar, true mean sidecar, false means initContainer Default value is false')    
+    parser.add_argument('--useSBR', metavar='useSBR', default="True",required=False, help='true|false This indicates if this container shall configure Source Based Routing, false means classic dest based routing Default value is true')    
 
     args = parser.parse_args()
     vpcRTTag=args.vpcRTTag
+    if args.useSBR == "False" or args.useSBR == "false" :
+        useSBR=False   
     if args.subnetLoopbacks == "True" or args.subnetLoopbacks == "true" :
         subnetLoopbacks=True    
     if args.runAsSidecar == "True" or args.runAsSidecar == "true" :
@@ -307,14 +323,20 @@ def main():
                                     cidr=ip         
                                 #Add VPC RT entries in the relevant tables             
                                 add_route_parallel(instanceData[mac]["interface-id"],cidr,rtbResources)      
+                                if useSBR:
+                                    ethIndex=instanceData[mac]["device-number"]
+                                    table=100+int(ethIndex)
+                                    tprint("Add SBR for IP: " + str(cidr))
+                                    addSBR(cidr,table)
                             if  routeAddCompleted == False:
                                 ##Add static route for the peers only once
                                 ethIndex=instanceData[mac]["device-number"]
+                                table=100+int(ethIndex)
                                 ipNet =ipaddress.ip_network(instanceData[mac]["subnet-ipv4-cidr-block"], strict=False)
                                 gw = str(ipNet[1])    
                                 if ethIndex in peers.keys():
-                                    tprint("add route for " + str(peers[ethIndex]))                                              
-                                    addRoute(peers[ethIndex],gw,intfName)     
+                                    tprint("add route for " + str(peers[ethIndex]) + " table " + str(table))
+                                    addRoute(peers[ethIndex],gw,intfName,table,useSBR)
                                 else:
                                     tprint ("No peers present for device-index "+ ethIndex+ ",skipping route add for " + intfName )                                      
                         if initcontainer == True :

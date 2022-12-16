@@ -1,6 +1,6 @@
-# Achieving automated Floating/Virtual IP MultiAZ solution on EKS
+# Automated Floating/Virtual IP MultiAZ solution on EKS
 
-This post explains the patterns to deploy a Multus based workload using floating/virtual IPs. These floating IPs can failover across AZs as we override the local VPC routing and define static routing.
+This post explains the patterns to deploy a Multus based workload using floating/virtual IPs. These floating IPs can failover across AZs as we define more specific routing in the VPC.
 
 ## Infra Setup
 
@@ -18,7 +18,7 @@ Note: Worker nodegroups use same node Selector labels, allowing application to b
 git clone https://github.com/aws-samples/eks-automated-multiaz-floating-ip.git
 ```
 
-Create the EKS Multus nodegroup creation in 2 AZs using cloud formation template in the git repo. Fir parameter inputs, you can refer to help text or https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/.
+Create the EKS Multus nodegroup creation in 2 AZs using cloud formation template in the git repo. Forr parameter inputs, you can refer to help text or https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/.
 
 ## Multi AZ Floating IP Solution on EKS
 
@@ -45,21 +45,25 @@ docker push xxxxxxxxxxxx.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
 This container reads configurations from a configmap (vipmanager-config), below are the description and creation command
 
 EX:
-  Intf1Peers: "10.10.10.48,10.0.0.0/24"
-  Intf2Peers: "192.168.1.204"
-  VPCRTTag: "ALL"
   RunAsSidecar: "False"
+  UseSBR: "True"
   SubnetBasedLoopbacks: "False"
-
-Intf1Peers --> This represents the peer network/hosts/clients communication with the 1st interface(net1/eth1) of the Multus pod 
-
-Intf2Peers --> This represents the peer network/hosts/clients communication with the 2nd interface(net2/eth2) of the Multus pod. (Optional if you don’t have 2nd interface peers)
-
-VPCRTTag --> This config represents the TAGs on the vpc routing table, to select and update the routes. If absent or "ALL" value is provided then all the routing tables in that VPC are updated with the routes.
+  Intf1Peers: "11.0.0.0/8"
+  Intf2Peers: "20.0.0.0/8"
+  VPCRTTag: "ALL"
 
 RunAsSidecar --> This config indicates whether this container has to run as initContainer (False) or as a sidecar (True).
 
+UseSBR --> This config indicates whether you want to define source based routing for your multus interfaces (net1,net2). if you enable it (True), then you dont need to add static routes for your peers (Intf1Peers, Intf2Peers) as it adds default route for each interface to reply from that interface. if you disable it (False) then your multus interfaces would need the static routes to respond to incoming traffic from peers(Intf1Peers, Intf2Peers)
+
 SubnetBasedLoopbacks --> This config is to indicate, if pattern 1 (non-vpc IP addresses are used for multus) or pattern 2 (VPC IP addresses used for multus). For pattern 1 set as False, and for pattern 2 set True.
+
+Intf1Peers --> This represents the peer network/hosts communicating with the 1st interface(net1/eth1) of the Multus pod 
+
+Intf2Peers --> This represents the peer network/hosts communicating with the 2nd interface(net2/eth2) of the Multus pod. 
+
+VPCRTTag --> This config represents the TAGs on the vpc routing table, to select and update the routes. If absent or "ALL" value is provided then all the routing tables in that VPC are updated with the routes.
+
 
 ```
 kubectl apply -f vipmanager-cm.yaml
@@ -67,8 +71,8 @@ kubectl apply -f vipmanager-cm.yaml
 
 #### Solution 1: Using non-VPC Floating IP Addresses
 
-In this solution, a sample pod is using 2 non-vpc IP address(es) as the floating IPs, and assigned to a pod on the secondary interfaces as shown below with IP 192.168.0.1 and 192.168.0.2 on eth1 and eth2 via Multus and ipvlan. 
-For simplicity in this example, we are using a single Pod, which runs on a worker in az1. You can also see, that VPC routing table gets updated with the ENI id of the eth1 and eth2 interface of the worker node (shown as ENI2 and ENI3) for the destination floating IPs (192.168.0.1 and 192.168.0.2). 
+In this solution, a sample pod is using 2 non-vpc IP address(es) as the floating IPs, and assigned to a pod on the secondary interfaces as shown below with IP 192.168.0.2 and 192.168.1.2 on eth1 and eth2 via Multus and ipvlan. 
+For simplicity in this example, we are using a single Pod, which runs on a worker in az1. You can also see, that VPC routing table gets updated with the ENI id of the eth1 and eth2 interface of the worker node for the destination floating IPs (192.168.0.2 and 192.168.1.2). 
 
 The vipmanager container does the route addition in this case, based on the Peers provided in the above configmap. In this case, we will be setting the VPC subnet default gateway as the route gateway, which is outside the pod multus network.
 
@@ -76,7 +80,7 @@ The vipmanager container does the route addition in this case, based on the Peer
 
 In this case, we create multus network-interface-attachment definition using ipvlan and host-local (you can use other ipam as well). In the network attachment, for simplicity, we are just creating a range of 1 IP address. 
 
-Note: In the multus net-attach-def, please define a dummy route and a gw. Actual routes are added by the vipmanager container, based on the peer configuration in vipmanager-config configmap. 
+Note: In the multus net-attach-def, you dont need to define a route & gw. Actual routes are added by the vipmanager container, based on the peer configuration in vipmanager-config configmap(UseSBR or via Intf1Peers,Intf2Peers ). 
 
 ```
 kubectl apply -f nonvpc/nad-1.yaml
@@ -147,7 +151,7 @@ The vipmanager container does the route addition in this case, based on the Peer
 
 In this case, we create multus network-interface-attachment definition using ipvlan and host-local (you can use other ipam as well). In the network attachment, for simplicity, we are just creating a range of 1 IP address. 
 
-Note: In the multus net-attach-def, please define a dummy route and a gw. Actual routes are added by the vipmanager container, base don the vipmanager-config configmap. 
+Note: In the multus net-attach-def, you dont need to define a route & gw. Actual routes are added by the vipmanager container, based on the peer configuration in vipmanager-config configmap(UseSBR or via Intf1Peers,Intf2Peers ). 
 
 ```
 kubectl apply -f vpc/nad-1.yaml

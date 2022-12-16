@@ -12,13 +12,9 @@ spec:
         "type": "host-local",
         "ranges": [
             [ {
-                  "subnet": "192.168.0.0/30",
-                  "rangeStart": "192.168.0.1",
-                  "rangeEnd": "192.168.0.1",
-                  "routes": [
-                    { "dst": "10.10.10.48/32" }
-                  ],
-                  "gateway": "1.1.1.1"
+                  "subnet": "192.168.0.0/29",
+                  "rangeStart": "192.168.0.2",
+                  "rangeEnd": "192.168.0.2"
             } ]
         ]
       }
