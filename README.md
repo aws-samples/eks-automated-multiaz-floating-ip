@@ -45,13 +45,14 @@ docker push xxxxxxxxxxxx.dkr.ecr.us-east-2.amazonaws.com/vipmanager:0.1
 This container reads configurations from a configmap (vipmanager-config), below are the description and creation command
 
 EX:
+```
   RunAsSidecar: "False"
   UseSBR: "True"
   SubnetBasedLoopbacks: "False"
   Intf1Peers: "11.0.0.0/8"
   Intf2Peers: "20.0.0.0/8"
   VPCRTTag: "ALL"
-
+```
 RunAsSidecar --> This config indicates whether this container has to run as initContainer (False) or as a sidecar (True).
 
 UseSBR --> This config indicates whether you want to define source based routing for your multus interfaces (net1,net2). if you enable it (True), then you dont need to add static routes for your peers (Intf1Peers, Intf2Peers) as it adds default route for each interface to reply from that interface. if you disable it (False) then your multus interfaces would need the static routes to respond to incoming traffic from peers(Intf1Peers, Intf2Peers)
