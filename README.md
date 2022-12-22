@@ -89,7 +89,7 @@ kubectl apply -f nonvpc/nad-2.yaml
 ```
 
 #### Floating IP (vipmanager) container deployment 
-##### vipmanager as initContainer 
+#### vipmanager as initContainer 
 If you are deploying the vimpmanager container as initContainer (RunAsSidecar: "False") then add the vip manager container as initContainer (example below), in your deploymentset/statefulset. 
 ```
       initContainers:
@@ -109,7 +109,8 @@ you can also refer to sample deployment-initContainer.yaml in this git.
 ```
 kubectl apply -f deployment-initContainer.yaml
 ```
-##### vipmanager as sidecar container 
+#### vipmanager as sidecar container
+
 If you are deploying the vimpmanager container as sidecar (RunAsSidecar: "True") then add the vip manager container as an another container (example below), in your deploymentset/statefulset. 
 ```
       containers:
@@ -160,7 +161,8 @@ kubectl apply -f vpc/nad-2.yaml
 ```
 
 #### Floating IP (vipmanager) container deployment 
-##### vipmanager as initContainer 
+#### vipmanager as initContainer 
+
 If you are deploying the vipmanager container as initContainer (RunAsSidecar: "False") then add the vip manager container as initContainer (example below), in your deploymentset/statefulset. 
 ```
       initContainers:
@@ -180,7 +182,7 @@ you can also refer to sample deployment-initContainer.yaml in this git.
 ```
 kubectl apply -f deployment-initContainer.yaml
 ```
-##### vipmanager as sidecar container 
+#### vipmanager as sidecar container 
 If you are deploying the vipmanager container as sidecar (RunAsSidecar: "True") then add the vip manager container as an another container (example below), in your deploymentset/statefulset. 
 ```
       containers:
