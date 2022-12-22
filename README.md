@@ -8,7 +8,7 @@ This post explains the patterns to deploy a Multus based workload using floating
 EKS cluster
 Bastion node with docker and git
 
-### EKS Node group setup
+## EKS Node group setup
 
 Clone this repo and you can use the sample CloudFormation template eks-multiaz-nodegroup-multus.yaml to create the nodegroup in 2 AZs.
 In this setup worker node groups are deployed in two AZs (Availability zones). Each Worker node group is behind an autoscaling group, per availability zone, providing resiliency for node failures in that availability zone. 
@@ -70,14 +70,14 @@ VPCRTTag --> This config represents the TAGs on the vpc routing table, to select
 kubectl apply -f vipmanager-cm.yaml
 ```
 
-#### Solution 1: Using non-VPC Floating IP Addresses
+### Solution 1: Using non-VPC Floating IP Addresses
 
 In this solution, a sample pod is using 2 non-vpc IP address(es) as the floating IPs, and assigned to a pod on the secondary interfaces as shown below with IP 192.168.0.2 and 192.168.1.2 on eth1 and eth2 via Multus and ipvlan. 
 For simplicity in this example, we are using a single Pod, which runs on a worker in az1. You can also see, that VPC routing table gets updated with the ENI id of the eth1 and eth2 interface of the worker node for the destination floating IPs (192.168.0.2 and 192.168.1.2). 
 
 The vipmanager container does the route addition in this case, based on the Peers provided in the above configmap. In this case, we will be setting the VPC subnet default gateway as the route gateway, which is outside the pod multus network.
 
-##### Multus Network Attachment - non-VPC Floating IP Addresses
+#### Multus Network Attachment - non-VPC Floating IP Addresses
 
 In this case, we create multus network-interface-attachment definition using ipvlan and host-local (you can use other ipam as well). In the network attachment, for simplicity, we are just creating a range of 1 IP address. 
 
@@ -88,8 +88,8 @@ kubectl apply -f nonvpc/nad-1.yaml
 kubectl apply -f nonvpc/nad-2.yaml
 ```
 
-##### Floating IP (vipmanager) container deployment 
-###### vipmanager as initContainer 
+#### Floating IP (vipmanager) container deployment 
+##### vipmanager as initContainer 
 If you are deploying the vimpmanager container as initContainer (RunAsSidecar: "False") then add the vip manager container as initContainer (example below), in your deploymentset/statefulset. 
 ```
       initContainers:
@@ -109,7 +109,7 @@ you can also refer to sample deployment-initContainer.yaml in this git.
 ```
 kubectl apply -f deployment-initContainer.yaml
 ```
-###### vipmanager as sidecar container 
+##### vipmanager as sidecar container 
 If you are deploying the vimpmanager container as sidecar (RunAsSidecar: "True") then add the vip manager container as an another container (example below), in your deploymentset/statefulset. 
 ```
       containers:
@@ -133,7 +133,7 @@ kubectl apply -f deployment-sidecar.yaml
 Once the containers are deployed you can test the ping or any other traffic (based on the secgroup rules) from one of the above configured peers. you can also check the routes in the vpc route tables, for the ENI route.
 You can also validate the failover of the pod on the worker node on az2, by either restarting the pod or cordoning the node.
 
-#### Solution 2: Using VPC Floating IP Addresses 
+### Solution 2: Using VPC Floating IP Addresses 
 
 The non-vpc, floating IP solution is usually preferred as it doesn’t mix with VPC Ip addresses & routing, furthermore it provides a clear separation between VPC and non-VPC IP addresses.  In some cases, you might not want to manage, configure and automate such non-vpc IP address space separately. In such cases, if you prefer to use the VPC IP addresses for the floating IP address across availability zones, then with some additional steps, you can achieve the same routing results.
 
@@ -148,7 +148,7 @@ In this case, you would notice that VPC routing table gets updated with the ENI 
 
 The vipmanager container does the route addition in this case, based on the Peers configured in the vipmanager-config configmap.
 
-##### Multus Network Attachment - VPC Floating IP Addresses
+#### Multus Network Attachment - VPC Floating IP Addresses
 
 In this case, we create multus network-interface-attachment definition using ipvlan and host-local (you can use other ipam as well). In the network attachment, for simplicity, we are just creating a range of 1 IP address. 
 
@@ -159,8 +159,8 @@ kubectl apply -f vpc/nad-1.yaml
 kubectl apply -f vpc/nad-2.yaml
 ```
 
-##### Floating IP (vipmanager) container deployment 
-###### vipmanager as initContainer 
+#### Floating IP (vipmanager) container deployment 
+##### vipmanager as initContainer 
 If you are deploying the vipmanager container as initContainer (RunAsSidecar: "False") then add the vip manager container as initContainer (example below), in your deploymentset/statefulset. 
 ```
       initContainers:
@@ -180,7 +180,7 @@ you can also refer to sample deployment-initContainer.yaml in this git.
 ```
 kubectl apply -f deployment-initContainer.yaml
 ```
-###### vipmanager as sidecar container 
+##### vipmanager as sidecar container 
 If you are deploying the vipmanager container as sidecar (RunAsSidecar: "True") then add the vip manager container as an another container (example below), in your deploymentset/statefulset. 
 ```
       containers:
