@@ -139,13 +139,13 @@ You can also validate the failover of the pod on the worker node on az2, by eith
 The non-vpc, floating IP solution is usually preferred as it doesn’t mix with VPC Ip addresses & routing, furthermore it provides a clear separation between VPC and non-VPC IP addresses.  In some cases, you might not want to manage, configure and automate such non-vpc IP address space separately. In such cases, if you prefer to use the VPC IP addresses for the floating IP address across availability zones, then with some additional steps, you can achieve the same routing results.
 
 Below are the steps:
-1.	Create dummy Floating IP subnets in any availability zone, Ex: 10.0.254.0/28 and 10.0.254.16/28 (/28 is the smallest subnet size)
-2.	you can pick any IP (other than network & broadcast IP address), from this subnet as your floating ip (Ex: 10.0.254.1 and 10.0.254.17) 
+1.	Create dummy Floating IP subnets in any availability zone, Ex: 10.10.254.0/28 and 10.10.254.16/28 (/28 is the smallest subnet size)
+2.	you can pick any IP (other than network & broadcast IP address), from this subnet as your floating ip (Ex: 10.10.254.2 and 10.10.254.18) 
 3.	Do not use these dummy subnets for any instance/ENI creation, as we will override the routing of these subnets in the vpc. To avoid accidental DHCP assignment, you can also use subnet cidr reservation to reserve the subnet cidr.
 
-In this sample, a sample pod is using 2 vpc IP addresses from above subnets as the floating IPs, and assigned to a pod on the secondary interfaces with IP 10.0.254.1 and 10.0.254.17 on eth1 and eth2 via Multus and ipvlan.  
+In this sample, a sample pod is using 2 vpc IP addresses from above subnets as the floating IPs, and assigned to a pod on the secondary interfaces with IP 10.10.254.2 and 10.10.254.18 on eth1 and eth2 via Multus and ipvlan.  
 
-In this case, you would notice that VPC routing table gets updated with the ENI id of the eth1 and eth2 interface of the worker node (shown as ENI2 and ENI3) against the whole subnet CIDR as 10.0.254.0/28 and 10.0.254.16/28 and not as /32 addresses (pattern 1).
+In this case, you would notice that VPC routing table gets updated with the ENI id of the eth1 and eth2 interface of the worker node (shown as ENI2 and ENI3) against the whole subnet CIDR as 10.10.254.0/28 and 10.10.254.16/28 and not as /32 addresses (pattern 1).
 
 The vipmanager container does the route addition in this case, based on the Peers configured in the vipmanager-config configmap.
 

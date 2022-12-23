@@ -12,9 +12,9 @@ spec:
         "type": "host-local",
         "ranges": [
             [ {
-                  "subnet": "10.0.254.16/30",
-                  "rangeStart": "10.0.254.17",
-                  "rangeEnd": "10.0.254.17"
+                  "subnet": "10.10.254.16/28",
+                  "rangeStart": "10.10.254.18",
+                  "rangeEnd": "10.10.254.18"
             } ]
         ]
       }
