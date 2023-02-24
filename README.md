@@ -20,6 +20,8 @@ git clone https://github.com/aws-samples/eks-automated-multiaz-floating-ip.git
 
 Create the EKS Multus nodegroup creation in 2 AZs using cloud formation template in the git repo. Forr parameter inputs, you can refer to help text or https://github.com/aws-samples/eks-install-guide-for-multus/blob/main/cfn/templates/nodegroup/.
 
+***Note:*** Please ensure that security group used by the primary interfaces across Nodegroups are either same or allow the inbound traffic from the VPC CNI subnets used in the nodegroups. If inbound rules in the security groups are not allowed, you would face intercommunication issues between pods. 
+
 ## Multi AZ Floating IP Solution on EKS
 
 This solution works as an addon initContainer or sidecar container (vipmanager) with your application, so your application doesn't have to change. Same image can be used for both cases.
