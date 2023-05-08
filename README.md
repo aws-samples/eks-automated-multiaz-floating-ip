@@ -2,6 +2,8 @@
 
 This post explains the patterns to deploy a Multus based workload using floating/virtual IPs. These floating IPs can failover across AZs as we define more specific routing in the VPC.
 
+Please refer to [blog](https://aws.amazon.com/blogs/industries/automated-application-failover-across-availability-zones-with-floating-virtual-ip-on-amazon-eks/) for additional details.
+
 ## Infra Setup
 
 ### Pre-requisite
