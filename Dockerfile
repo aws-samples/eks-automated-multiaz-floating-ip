@@ -1,4 +1,4 @@
-FROM public.ecr.aws/amazonlinux/amazonlinux:latest
+FROM public.ecr.aws/amazonlinux/amazonlinux:2
 WORKDIR /app/
 RUN yum -y update \
     &&  yum -y install python3 iproute iproute2 iputils tcpdump curl net-tools procps sudo wget
