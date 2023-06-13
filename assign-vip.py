@@ -303,11 +303,12 @@ def main():
                     intfName=data[0]
                     mac=data[1]
                     ipList=[]
-                    for cidr in data[2].split(' '):
-                        ip=cidr.split('/')[0] 
-                        prefix='/32'
-                        ipList.append(ip+prefix)
-                    interfaceDetails[mac]={"intfName": intfName, "ipList": ipList}
+                    if data[2]:
+                        for cidr in data[2].split(' '):
+                            ip=cidr.split('/')[0] 
+                            prefix='/32'
+                            ipList.append(ip+prefix)
+                        interfaceDetails[mac]={"intfName": intfName, "ipList": ipList}
                 ##if there add been any change in the IPs on the pod then add the new routes in VPC
                 if curInterfaceDetails != interfaceDetails:
                     tprint(interfaceDetails)
