@@ -9,4 +9,4 @@ data:
   VPCRTTag: "ALL"
   RunAsSidecar: "True"
   UseSBR: "True"
-  SubnetBasedLoopbacks: "True"
+  SubnetBasedLoopbacks: "False"
