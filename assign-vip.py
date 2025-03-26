@@ -27,6 +27,20 @@ def get_metadata_token():
     r= requests.put(token_url,headers=headers,timeout=(2, 5))
     return r.text
 
+def get_ip_version(ip):
+    try:
+        return ipaddress.ip_address(ip).version
+    except ValueError:
+        return None
+
+def get_appropriate_prefix(ip):
+    version = get_ip_version(ip)
+    if version == 4:
+        return '/32'
+    elif version == 6:
+        return '/128'
+    return None
+
 def getInstanceData(instanceData,vpcId):
     instance_identity_url = "http://169.254.169.254/latest/dynamic/instance-identity/document"
     session = requests.Session()
@@ -79,6 +93,7 @@ def getInstanceData(instanceData,vpcId):
     except Exception as e:
         tprint("Execption: caught exception " + str(e.__class__.__name__))
         raise             
+
 def build_subnet_data(client,vpcId,subnetDetails) :
     try:
         response = client.describe_subnets(
@@ -90,10 +105,14 @@ def build_subnet_data(client,vpcId,subnetDetails) :
         for i in response['Subnets']:
             x={}
             x['SubnetId']=i['SubnetId']     
-            subnetDetails[i['CidrBlock']]=x
+            if 'CidrBlock' in i:
+                subnetDetails[i['CidrBlock']] = x
+            if 'Ipv6CidrBlock' in i:
+                subnetDetails[i['Ipv6CidrBlock']] = x
     except Exception as e:
         tprint("Execption: caught exception " + str(e.__class__.__name__))
         raise                      
+
 ## This function runs the shell command and returns the command output
 def shell_run_cmd(cmd,printOutput=True):
     if printOutput:
@@ -105,21 +124,34 @@ def shell_run_cmd(cmd,printOutput=True):
     if printOutput:
         tprint("stdout:" + str(stdout.split("\n")) + " stderr: " + stderr + " retCode: " + str(retCode))
     return (stdout, retCode)      
+
 def addSBR(cidr, table):
     ip_str=cidr.split('/')
-    query_cmd="ip rule ls | grep -q " + ip_str[0]
-    tprint("check if there is a matching rule first: " + query_cmd)
-    output, ret=shell_run_cmd(query_cmd)
-    if ret==1:
-        cmd="ip rule add from " + cidr + " table " + str(table)
-        shell_run_cmd(cmd)
+    ip_version = get_ip_version(ip_str[0])
+    
+    if ip_version == 6:
+        query_cmd = f"ip -6 rule ls | grep -q {ip_str[0]}"
+        add_cmd = f"ip -6 rule add from {cidr} table {str(table)}"
+    else:
+        query_cmd = f"ip rule ls | grep -q {ip_str[0]}"
+        add_cmd = f"ip rule add from {cidr} table {str(table)}"
+    
+    tprint(f"check if there is a matching rule first: {query_cmd}")
+    output, ret = shell_run_cmd(query_cmd)
+    if ret == 1:
+        shell_run_cmd(add_cmd)
+
 def addRoute(peers,gw,intf,table,useSBR):
+    ip_version = get_ip_version(gw)
+    ip_cmd = "ip -6" if ip_version == 6 else "ip"
+
     for peer in peers:
         if useSBR: 
-            cmd="ip r add default via "+ gw + " dev " + intf+ " onlink table " + str(table)
+            cmd = f"{ip_cmd} route add default via {gw} dev {intf} onlink table {str(table)}"
         else:
-            cmd="ip r add " + peer + " via "+ gw + " dev " + intf+ " onlink"
+            cmd = f"{ip_cmd} route add {peer} via {gw} dev {intf} onlink"
         shell_run_cmd(cmd)
+
 # This function checks if the prefix with prefixlen(netmask) belongs to a subnet or not, and returns the subnet cidr the ip address belongs to
 def find_subnet_cidr(inputCidr,subnetDetails):
     foundCidr=None
@@ -140,6 +172,7 @@ def find_subnet_cidr(inputCidr,subnetDetails):
             foundCidr=inputCidr      
     tprint("inputCidr:"+ inputCidr + " subnet Cidr found:"+ str(foundCidr))   
     return foundCidr     
+
 def add_route_parallel(eni,cidr,rtbResources):
     procipv4 = []
     start = time.perf_counter() 
@@ -153,15 +186,25 @@ def add_route_parallel(eni,cidr,rtbResources):
         p.join(10)    
     end = time.perf_counter()        
     tprint(f"Finished All route tables for { cidr} {eni}  route Time is {end - start}")
+
 def add_route_new(eni,cidr,rtb,ec2client) :   
     #start = time.perf_counter() 
         ##try replacing first adding
     action="replace"
+    ip_version = get_ip_version(cidr.split('/')[0])
+
     try:   
         route = ec2client.Route(rtb,cidr)
-        response = route.replace(
-                NetworkInterfaceId=eni,
-                )        
+        if ip_version == 6:
+            response = route.replace(
+                DestinationIpv6CidrBlock=cidr,
+                NetworkInterfaceId=eni
+            )
+        else:
+            response = route.replace(
+                DestinationCidrBlock=cidr,
+                NetworkInterfaceId=eni
+            )
 #        logger1.debug("added route for",cidr)
     except botocore.exceptions.ClientError as err:
         errorcode = err.response['Error']['Code']
@@ -169,10 +212,16 @@ def add_route_new(eni,cidr,rtb,ec2client) :
         action="add"
         try: 
             route_table=ec2client.RouteTable(rtb)
-            route = route_table.create_route(
-                DestinationCidrBlock=cidr,
-                NetworkInterfaceId=eni
-            )        
+            if ip_version == 6:
+                route = route_table.create_route(
+                    DestinationIpv6CidrBlock=cidr,
+                    NetworkInterfaceId=eni
+                )
+            else:
+                route = route_table.create_route(
+                    DestinationCidrBlock=cidr,
+                    NetworkInterfaceId=eni
+                )
             tprint(f"Finished adding new route for { cidr} {eni}")
         except botocore.exceptions.ClientError as err:
             errorcode = err.response['Error']['Code']            
@@ -215,6 +264,7 @@ def build_vpc_rt_data(ec2_client,vpcId,rtbResources,vpcRTTag) :
     except Exception as e:
         tprint("Execption: caught exception " + str(e.__class__.__name__))
         raise     
+
 def main():    
     instance_id = None
     cmd = "for x in `ls /sys/class/net/ | egrep -v 'eth0|lo'`; do y=`ip a show dev $x | egrep 'link/ether'|cut -d ' ' -f 6`;z=`ip a show dev $x | egrep 'scope global'|cut -d ' ' -f 6`; echo ${x}=${y}=${z}; done"
@@ -306,8 +356,9 @@ def main():
                     if data[2]:
                         for cidr in data[2].split(' '):
                             ip=cidr.split('/')[0] 
-                            prefix='/32'
-                            ipList.append(ip+prefix)
+                            prefix = get_appropriate_prefix(ip)
+                            if prefix:
+                                ipList.append(ip + prefix)
                         interfaceDetails[mac]={"intfName": intfName, "ipList": ipList}
                 ##if there add been any change in the IPs on the pod then add the new routes in VPC
                 if curInterfaceDetails != interfaceDetails:
